@@ -1,0 +1,16 @@
+version: '2'
+
+services:
+  web:
+    image: cubarnetes
+    environment:
+      - DB_USER=postgres
+      - DB_PASS=postgres
+      - DB_URL=jdbc:postgresql://postgres/postgres
+    ports:
+     - "8080:8080"
+    networks:
+     - cubarnetes-network
+
+networks:
+  cubarnetes-network:
