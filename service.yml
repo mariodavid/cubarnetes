@@ -1,0 +1,17 @@
+---
+apiVersion: "v1"
+kind: "Service"
+metadata:
+  name: "cubarnetes-app-service"
+  namespace: "default"
+  labels:
+    app: "cubarnetes-app"
+spec:
+  ports:
+  - protocol: "TCP"
+    port: 8080
+    targetPort: 8080
+  selector:
+    app: "cubarnetes-app"
+  type: "LoadBalancer"
+  loadBalancerIP: ""

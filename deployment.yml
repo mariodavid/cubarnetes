@@ -1,0 +1,76 @@
+---
+apiVersion: "v1"
+kind: "ConfigMap"
+metadata:
+  name: "cubarnetes-app-config"
+  namespace: "default"
+  labels:
+    app: "cubarnetes-app"
+data:
+  DB_URL: "jdbc:postgresql://127.0.0.1:5432/postgres"
+---
+apiVersion: "extensions/v1beta1"
+kind: "Deployment"
+metadata:
+  name: "cubarnetes-app"
+  namespace: "default"
+  labels:
+    app: "cubarnetes-app"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: "cubarnetes-app"
+  template:
+    metadata:
+      labels:
+        app: "cubarnetes-app"
+    spec:
+      containers:
+      - name: "cubarnetes"
+        image: "gcr.io/cuba-on-kubernetes/cubarnetes:latest"
+        env:
+        - name: "DB_URL"
+          valueFrom:
+            configMapKeyRef:
+              key: "DB_URL"
+              name: "cubarnetes-app-config"
+        - name: "DB_USER"
+          valueFrom:
+            secretKeyRef:
+              name: cloudsql-db-credentials
+              key: username
+        - name: "DB_PASS"
+          valueFrom:
+            secretKeyRef:
+              name: cloudsql-db-credentials
+              key: password
+      - name: cloudsql-proxy
+        image: gcr.io/cloudsql-docker/gce-proxy:1.11
+        command: ["/cloud_sql_proxy",
+                  "-instances=cuba-on-kubernetes:us-central1:cubarnetes=tcp:5432",
+                  "-credential_file=/secrets/cloudsql/credentials.json"]
+        volumeMounts:
+          - name: cloudsql-instance-credentials
+            mountPath: /secrets/cloudsql
+            readOnly: true
+      volumes:
+        - name: cloudsql-instance-credentials
+          secret:
+            secretName: cloudsql-instance-credentials
+---
+apiVersion: "autoscaling/v1"
+kind: "HorizontalPodAutoscaler"
+metadata:
+  name: "cubarnetes-app-hpa"
+  namespace: "default"
+  labels:
+    app: "cubarnetes-app"
+spec:
+  scaleTargetRef:
+    kind: "Deployment"
+    name: "cubarnetes-app"
+    apiVersion: "apps/v1beta1"
+  minReplicas: 1
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 80
